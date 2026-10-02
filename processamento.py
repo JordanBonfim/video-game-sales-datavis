@@ -1,7 +1,30 @@
 import pandas as pd
 import kagglehub
-import kagglehub
+import os
 
+def is_directory_empty(path):
+    # Returns True if the directory is empty, False otherwise
+    with os.scandir(path) as it:
+        return not any(it)
+      
+files_path = "./files"
+force_download = False # Set to True if you want to force the download of the dataset even if it already exists
+
+if(not os.path.exists(files_path)):
+  os.makedirs(files_path)
+
+if os.path.exists(files_path) and os.path.isdir(files_path):
+    if is_directory_empty(files_path) or force_download:
+        path = kagglehub.dataset_download(
+          "bhushandivekar/video-game-sales-and-industry-data-1980-2024",
+          output_dir=files_path,
+          force_download=force_download
+        )
+
+        print("Path to dataset files:", path)
+    else:
+        print("Dataset files already exist in the directory. Skipping download.")
+ 
 # Read the raw dataset CSV
 df_raw = pd.read_csv('./files/Video Games Sales (1980-2024) - Raw.csv')
 
