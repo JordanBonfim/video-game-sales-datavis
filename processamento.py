@@ -39,6 +39,11 @@ print("Remaining rows after filtering sales and dates:", len(df_filtered))
 # Fill missing values in the 'developer' column with 'Unknown'
 df_filtered['developer'] = df_filtered['developer'].fillna('Unknown')
 
+#-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=
+# Fill missing values in the regional sales columns with 0
+regional_cols = ['na_sales', 'jp_sales', 'pal_sales', 'other_sales'] # TODO:
+df_filtered[regional_cols] = df_filtered[regional_cols].fillna(0)    # Ask our professor if this is reasonable
+#-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=-=-=-=-=--=-=-=
 
 # Comparision with the original cleaned dataset
 print("\nComparing with the cleaned dataset:")
