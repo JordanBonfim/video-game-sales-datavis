@@ -219,3 +219,7 @@ __marimo__/
 
 # Dataset files
 files/*
+
+
+
+/node_modules/
