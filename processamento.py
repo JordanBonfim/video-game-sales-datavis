@@ -98,3 +98,8 @@ print(f"Columns removed in Cleaned: {list(removed_columns)}")
 print("\n--- FINAL DATASET CHECK ---")
 print("Missing values in our filtered dataset:")
 print(df_filtered.isna().sum())
+
+# Export pre-processed dataset
+df_filtered.to_csv('./files/Video_Games_Sales_Preprocessed.csv', index=False)
+
+print("Preprocessed dataset saved successfully!")
