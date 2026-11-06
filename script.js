@@ -7,10 +7,10 @@ const charts = {
     salesTimeline: echarts.init(document.getElementById('salesTimeline')),
     releasesTimeline: echarts.init(document.getElementById('releasesTimeline')),
     salesArea: echarts.init(document.getElementById('salesArea')),
-    // geoMap: echarts.init(document.getElementById('geoMap'))
+    geoMap: echarts.init(document.getElementById('geoMap'))
 };
 
-// 1. Sincroniza os gráficos temporais
+// Sincroniza os gráficos temporais
 charts.salesTimeline.group = 'group1';
 charts.releasesTimeline.group = 'group1';
 charts.salesArea.group = 'group1';
@@ -22,7 +22,7 @@ const regions = [
     { key: 'pal_sales', name: 'Europa' }
 ];
 
-// 2. Ativa o loading antes de ler o CSV
+// Ativa o loading antes de ler o CSV
 Object.values(charts).forEach(chart => chart.showLoading());
 
 Papa.parse('Video_Games_Sales_Preprocessed.csv', {
@@ -59,7 +59,7 @@ function getYear(date) {
 function processData(games) {
     const validGames = games.map(game => ({
         ...game,
-        console: game.console?.trim() || 'Unknown', // Limpeza do nome do console adicionada
+        console: game.console?.trim() || 'Unknown', 
         genre: game.genre?.trim() || 'Unknown',
         title: game.title?.trim() || '',
         year: getYear(game.release_date),
@@ -71,22 +71,22 @@ function processData(games) {
 
     renderRegionalCharts(validGames);
     renderTemporalCharts(validGames);
-    // renderGeoMap(validGames);
+    renderGeoMap(validGames); // ficou feio mas ok
 }
 
-function renderGeoMap(games) {
+function renderGeoMap(games) { // nã tá sendo usado
     charts.geoMap.showLoading();
 
-    // 1. Configuração das regiões com suas coordenadas [Longitude, Latitude]
+    // Configuração das regiões com suas coordenadas [Longitude, Latitude]
     const regionsConfig = {
         na: { name: 'América do Norte', center: [-100, 40], data: {} },
         pal: { name: 'Europa', center: [10, 50], data: {} },
         jp: { name: 'Japão', center: [138, 36], data: {} }
     };
 
-    // 2. Agrupa as vendas (Você pode trocar game.genre por game.console se preferir)
+    // Agrupa as vendas (talvez trocar game.genre por game.console ??? De acordo com o que vamos querendo)
     games.forEach(game => {
-        const item = game.genre; // Troque para game.console para ver plataformas
+        const item = game.console; // game.console funciona
         if (!item || item === 'Unknown') return;
         
         regionsConfig.na.data[item] = (regionsConfig.na.data[item] || 0) + game.na_sales;
@@ -102,14 +102,14 @@ function renderGeoMap(games) {
             .slice(0, 5); // Limita a 5 fatias
     }
 
-    // 3. Carrega o GeoJSON do mapa-múndi via CDN
+    // Carrega o GeoJSON do mapa mundial via CDN
     fetch('https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json')
         .then(response => response.json())
         .then(worldJson => {
-            // Registra o mapa no ECharts
+
             echarts.registerMap('world', worldJson);
             
-            // 4. Cria uma série do tipo 'pie' para cada região
+            // pie para cada região
             const pieSeries = Object.keys(regionsConfig).map(key => {
                 const region = regionsConfig[key];
                 return {
@@ -120,17 +120,17 @@ function renderGeoMap(games) {
                     },
                     label: { show: false },
                     labelLine: { show: false },
-                    radius: 35, // Tamanho do gráfico de pizza
-                    center: region.center, // Posição geográfica
+                    radius: 35, 
+                    center: region.center, 
                     data: getTop5PieData(region.data)
                 };
             });
 
-            // 5. Configura e renderiza o mapa
+         
             const option = {
                 geo: {
                     map: 'world',
-                    roam: true, // Permite zoom e arrastar o mapa
+                    roam: true,
                     itemStyle: {
                         areaColor: '#e7e8ea',
                         borderColor: '#cccccc'
@@ -179,7 +179,7 @@ function renderRegionalCharts(games) {
         return totalB - totalA;
     });
 
-    // --- 1. Gráfico de Barras ---
+    // Gráfico de Barras 
     charts.regionalBar.setOption({
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
         legend: { data: regions.map(region => region.name) },
@@ -193,7 +193,7 @@ function renderRegionalCharts(games) {
         }))
     });
 
-    // --- 2. Gráfico Empilhado (Com Tooltip na Legenda) ---
+    // Gráfico Empilhado
     const totalsByRegion = {};
     regions.forEach(region => {
         totalsByRegion[region.key] = sortedGenres.reduce((sum, genre) => sum + salesByGenre[genre][region.key], 0);
@@ -206,7 +206,7 @@ function renderRegionalCharts(games) {
             bottom: 0,
             tooltip: {
                 show: true,
-                // Define a posição do tooltip: [posição X, posição Y]
+                // posição do tooltip: [posição X, posição Y]
                 position: function (point) {
                     // Mantém o X no mouse e joga o Y 20 pixels para baixo
                     return [point[0], point[1] + 20];
@@ -242,7 +242,7 @@ function renderRegionalCharts(games) {
         }))
     });
 
-    // --- 3. Heatmap ---
+    //Heatmap
     const heatmapData = [];
     sortedGenres.forEach((genre, genreIndex) => {
         regions.forEach((region, regionIndex) => {
@@ -301,7 +301,7 @@ function renderTemporalCharts(games) {
         if (game.title) releasesByYear[game.year].add(game.title);
     });
 
-    // 4. Configuração padrão de DataZoom para reuso
+    // Configuração padrão de DataZoom
     const zoomConfig = [
         { type: 'inside', start: 50, end: 100 }, 
         { type: 'slider', start: 50, end: 100, height: 20, bottom: 5 }

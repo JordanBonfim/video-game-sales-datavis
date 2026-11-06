@@ -27,3 +27,19 @@ pip install pandas kagglehub
 ```bash
 python .\processamento.py    
 ```
+
+
+## Vizualização
+
+Disponível em https://video-game-datavis.vercel.app/
+
+### Como executar
+### Na raiz:
+```bash
+npm install    
+```
+```bash
+python -m http.server 8008    
+```
+
+###
