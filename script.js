@@ -1,5 +1,23 @@
 const statusElement = document.getElementById('status');
 
+
+let validGamesData = [];
+let isRelativeMode = false; // false = Absoluto (Milhões) | true = Relativo (%)
+
+const globalModeBtn = document.getElementById('globalModeBtn');
+if (globalModeBtn) {
+    globalModeBtn.addEventListener('click', () => {
+        isRelativeMode = !isRelativeMode;
+        globalModeBtn.textContent = isRelativeMode
+            ? 'Modo: Proporção Relativa (%)'
+            : 'Modo: Valores Absolutos (Milhões)';
+
+        renderRegionalCharts(validGamesData);
+        renderTemporalCharts(validGamesData);
+    });
+}
+
+
 const charts = {
     regionalBar: echarts.init(document.getElementById('regionalBar')),
     regionalStacked: echarts.init(document.getElementById('regionalStacked')),
@@ -9,6 +27,8 @@ const charts = {
     salesArea: echarts.init(document.getElementById('salesArea')),
     geoMap: echarts.init(document.getElementById('geoMap'))
 };
+
+
 
 // Sincroniza os gráficos temporais
 charts.salesTimeline.group = 'group1';
@@ -68,93 +88,102 @@ function processData(games) {
         pal_sales: number(game.pal_sales),
         total_sales: number(game.total_sales)
     }));
+    validGamesData = validGames;
 
     renderRegionalCharts(validGames);
     renderTemporalCharts(validGames);
     renderGeoMap(validGames); // ficou feio mas ok
 }
 
-function renderGeoMap(games) { // nã tá sendo usado
-    charts.geoMap.showLoading();
+function renderGeoMap(games) {
+    const regionsConfig = [
+        { key: 'na_sales', name: 'América do Norte', color: '#5470c6', childColor: '#8ea2dc' },
+        { key: 'pal_sales', name: 'Europa', color: '#fac858', childColor: '#fce09b' },
+        { key: 'jp_sales', name: 'Japão', color: '#91cc75', childColor: '#bce0aa' }
+    ];
 
-    // Configuração das regiões com suas coordenadas [Longitude, Latitude]
-    const regionsConfig = {
-        na: { name: 'América do Norte', center: [-100, 40], data: {} },
-        pal: { name: 'Europa', center: [10, 50], data: {} },
-        jp: { name: 'Japão', center: [138, 36], data: {} }
-    };
+    const sunburstData = regionsConfig.map(region => {
+        const salesByConsole = {};
 
-    // Agrupa as vendas (talvez trocar game.genre por game.console ??? De acordo com o que vamos querendo)
-    games.forEach(game => {
-        const item = game.console; // game.console funciona
-        if (!item || item === 'Unknown') return;
-        
-        regionsConfig.na.data[item] = (regionsConfig.na.data[item] || 0) + game.na_sales;
-        regionsConfig.pal.data[item] = (regionsConfig.pal.data[item] || 0) + game.pal_sales;
-        regionsConfig.jp.data[item] = (regionsConfig.jp.data[item] || 0) + game.jp_sales;
+        games.forEach(game => {
+            const consoleName = game.console;
+            if (!consoleName || consoleName === 'Unknown') return;
+            salesByConsole[consoleName] = (salesByConsole[consoleName] || 0) + game[region.key];
+        });
+
+        const sortedConsoles = Object.entries(salesByConsole)
+            .map(([name, value]) => ({
+                name,
+                value: Number(value.toFixed(2)),
+                itemStyle: { color: region.childColor }
+            }))
+            .filter(item => item.value > 0)
+            .sort((a, b) => b.value - a.value);
+
+        const topConsoles = sortedConsoles.slice(0, 8);
+        const othersSum = sortedConsoles
+            .slice(8)
+            .reduce((sum, item) => sum + item.value, 0);
+
+        if (othersSum > 0) {
+            topConsoles.push({
+                name: 'Outros',
+                value: Number(othersSum.toFixed(2)),
+                itemStyle: { color: region.childColor, opacity: 0.75 }
+            });
+        }
+
+        return {
+            name: region.name,
+            itemStyle: { color: region.color },
+            children: topConsoles
+        };
     });
 
-    // Função auxiliar para pegar os Top 5 de cada região e formatar para a pizza
-    function getTop5PieData(regionData) {
-        return Object.entries(regionData)
-            .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5); // Limita a 5 fatias
-    }
+    charts.geoMap.setOption({
+        tooltip: {
+            trigger: 'item',
+            formatter: params => {
+                const value = Number(params.value || 0).toFixed(2);
+                const treePathInfo = params.treePathInfo || [];
+                const parent = treePathInfo[treePathInfo.length - 2];
+                const parentVal = parent ? parent.value : 0;
+                const pct = parentVal > 0 ? ((params.value / parentVal) * 100).toFixed(1) : '100.0';
 
-    // Carrega o GeoJSON do mapa mundial via CDN
-    fetch('https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json')
-        .then(response => response.json())
-        .then(worldJson => {
-
-            echarts.registerMap('world', worldJson);
-            
-            // pie para cada região
-            const pieSeries = Object.keys(regionsConfig).map(key => {
-                const region = regionsConfig[key];
-                return {
-                    type: 'pie',
-                    coordinateSystem: 'geo',
-                    tooltip: {
-                        formatter: '{b}: {c}M ({d}%)'
-                    },
-                    label: { show: false },
-                    labelLine: { show: false },
-                    radius: 35, 
-                    center: region.center, 
-                    data: getTop5PieData(region.data)
-                };
-            });
-
-         
-            const option = {
-                geo: {
-                    map: 'world',
-                    roam: true,
-                    itemStyle: {
-                        areaColor: '#e7e8ea',
-                        borderColor: '#cccccc'
-                    },
-                    emphasis: {
-                        label: { show: false },
-                        itemStyle: { areaColor: '#d0d2d6' }
+                return `<strong>${params.name}</strong><br/>Vendas: ${value}M (${pct}%)`;
+            }
+        },
+        series: [{
+            type: 'sunburst',
+            data: sunburstData,
+            radius: ['18%', '92%'],
+            center: ['50%', '50%'],
+            sort: undefined,
+            emphasis: { focus: 'ancestor' },
+            levels: [
+                {},
+                {
+                    r0: '18%',
+                    r: '48%',
+                    itemStyle: { borderWidth: 2, borderColor: '#fff' },
+                    label: {
+                        rotate: 'tangential',
+                        fontWeight: 'bold',
+                        fontSize: 12
                     }
                 },
-                tooltip: { trigger: 'item' },
-                legend: { 
-                    type: 'scroll',
-                    bottom: 0 
-                },
-                series: pieSeries
-            };
-
-            charts.geoMap.hideLoading();
-            charts.geoMap.setOption(option);
-        })
-        .catch(error => {
-            console.error("Erro ao carregar o mapa:", error);
-            charts.geoMap.hideLoading();
-        });
+                {
+                    r0: '48%',
+                    r: '92%',
+                    itemStyle: { borderWidth: 1.5, borderColor: '#fff' },
+                    label: {
+                        align: 'right',
+                        fontSize: 11
+                    }
+                }
+            ]
+        }]
+    }, true);
 }
 
 
@@ -173,32 +202,63 @@ function renderRegionalCharts(games) {
         salesByGenre[game.genre].pal_sales += game.pal_sales;
     });
 
-    const sortedGenres = [...genres].sort((a, b) => {
-        const totalA = regions.reduce((sum, region) => sum + salesByGenre[a][region.key], 0);
-        const totalB = regions.reduce((sum, region) => sum + salesByGenre[b][region.key], 0);
-        return totalB - totalA;
+    // Calcula o total de vendas de cada região para poder gerar as porcentagens
+    const totalsByRegion = {};
+    regions.forEach(region => {
+        totalsByRegion[region.key] = genres.reduce(
+            (sum, genre) => sum + salesByGenre[genre][region.key], 0
+        );
     });
 
-    // Gráfico de Barras 
+    // Função auxiliar que devolve o valor em Milhões ou em % dependendo do botão
+    const getMetricValue = (genre, regionKey) => {
+        const rawValue = salesByGenre[genre][regionKey];
+        if (!isRelativeMode) return Number(rawValue.toFixed(2));
+        
+        const total = totalsByRegion[regionKey];
+        return total > 0 ? Number(((rawValue / total) * 100).toFixed(2)) : 0;
+    };
+
+    // Ordena os gêneros (no modo relativo, ordena pela média das porcentagens para ficar justo)
+    const sortedGenres = [...genres].sort((a, b) => {
+        const sumA = regions.reduce((sum, r) => sum + getMetricValue(a, r.key), 0);
+        const sumB = regions.reduce((sum, r) => sum + getMetricValue(b, r.key), 0);
+        return sumB - sumA;
+    });
+
+    const unitSuffix = isRelativeMode ? '%' : 'M';
+
+    // 1. Gráfico de Barras
+    // 1. Gráfico de Barras
     charts.regionalBar.setOption({
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        tooltip: { 
+            trigger: 'axis', 
+            axisPointer: { type: 'shadow' },
+            valueFormatter: value => `${value.toFixed(2)}${unitSuffix}`
+        },
         legend: { data: regions.map(region => region.name) },
-        grid: { left: 60, right: 25, bottom: 80 },
-        xAxis: { type: 'category', data: sortedGenres, axisLabel: { rotate: 35 } },
-        yAxis: { type: 'value', name: 'Vendas (Milhões)' },
+        grid: { left: 60, right: 25, bottom: 95 }, // aumente um pouco o bottom se algum nome longo cortar embaixo
+        xAxis: { 
+            type: 'category', 
+            data: sortedGenres, 
+            axisLabel: { 
+                interval: 0, // <-- Força a exibição de todos os rótulos
+                rotate: 35 
+            } 
+        },
+        yAxis: { 
+            type: 'value', 
+            name: isRelativeMode ? 'Participação na Região (%)' : 'Vendas (Milhões)',
+            axisLabel: { formatter: isRelativeMode ? '{value}%' : '{value}' }
+        },
         series: regions.map(region => ({
             name: region.name,
             type: 'bar',
-            data: sortedGenres.map(genre => salesByGenre[genre][region.key])
+            data: sortedGenres.map(genre => getMetricValue(genre, region.key))
         }))
     });
 
-    // Gráfico Empilhado
-    const totalsByRegion = {};
-    regions.forEach(region => {
-        totalsByRegion[region.key] = sortedGenres.reduce((sum, genre) => sum + salesByGenre[genre][region.key], 0);
-    });
-
+    // 2. Gráfico Empilhado (mantém o seu código original intacto)
     charts.regionalStacked.setOption({
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: value => `${value.toFixed(2)}%` },
         legend: { 
@@ -206,23 +266,17 @@ function renderRegionalCharts(games) {
             bottom: 0,
             tooltip: {
                 show: true,
-                // posição do tooltip: [posição X, posição Y]
                 position: function (point) {
-                    // Mantém o X no mouse e joga o Y 20 pixels para baixo
                     return [point[0], point[1] + 20];
                 },
                 formatter: function(params) {
                     const genre = params.name;
                     let tooltipHtml = `<strong>${genre}</strong><br/>`;
-                    
                     regions.forEach(region => {
                         const total = totalsByRegion[region.key];
-                        const percent = total > 0 
-                            ? (salesByGenre[genre][region.key] / total * 100) 
-                            : 0;
+                        const percent = total > 0 ? (salesByGenre[genre][region.key] / total * 100) : 0;
                         tooltipHtml += `${region.name}: ${percent.toFixed(2)}%<br/>`;
                     });
-                    
                     return tooltipHtml;
                 }
             }
@@ -242,15 +296,15 @@ function renderRegionalCharts(games) {
         }))
     });
 
-    //Heatmap
+    // 3. Heatmap (agora responde ao botão também!)
     const heatmapData = [];
     sortedGenres.forEach((genre, genreIndex) => {
         regions.forEach((region, regionIndex) => {
-            heatmapData.push([regionIndex, genreIndex, Number(salesByGenre[genre][region.key].toFixed(2))]);
+            heatmapData.push([regionIndex, genreIndex, getMetricValue(genre, region.key)]);
         });
     });
 
-    const maxSales = Math.max(...heatmapData.map(item => item[2]), 1);
+    const maxHeatmapValue = Math.max(...heatmapData.map(item => item[2]), 1);
 
     charts.regionalHeatmap.setOption({
         tooltip: {
@@ -258,16 +312,31 @@ function renderRegionalCharts(games) {
             formatter: params => {
                 const region = regions[params.data[0]].name;
                 const genre = sortedGenres[params.data[1]];
-                const sales = params.data[2];
-                return `${genre}<br>${region}: ${sales.toFixed(2)} milhões`;
+                const val = params.data[2];
+                return `${genre}<br>${region}: ${val.toFixed(2)}${isRelativeMode ? '% das vendas locais' : ' milhões'}`;
             }
         },
-        grid: { left: 110, right: 40, bottom: 70 },
-        xAxis: { type: 'category', data: regions.map(region => region.name) },
-        yAxis: { type: 'category', data: sortedGenres, inverse: true },
+        grid: { left: 125, right: 30, bottom: 75 },
+        xAxis: { 
+            type: 'category', 
+            data: regions.map(region => region.name),
+            axisLabel: { 
+                interval: 0, // Força exibir todas as regiões (colunas)
+                fontSize: 11
+            }
+        },
+        yAxis: { 
+            type: 'category', 
+            data: sortedGenres, 
+            inverse: true,
+            axisLabel: { 
+                interval: 0, // Garante que nenhum gênero (linha) suma também
+                fontSize: 11
+            }
+        },
         visualMap: {
             min: 0,
-            max: maxSales,
+            max: maxHeatmapValue,
             calculable: true,
             orient: 'horizontal',
             left: 'center',
@@ -277,7 +346,10 @@ function renderRegionalCharts(games) {
         series: [{
             type: 'heatmap',
             data: heatmapData,
-            label: { show: true, formatter: params => params.data[2] },
+            label: { 
+                show: true, 
+                formatter: params => isRelativeMode ? `${params.data[2]}%` : params.data[2] 
+            },
             emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.4)' } }
         }]
     });
@@ -307,19 +379,43 @@ function renderTemporalCharts(games) {
         { type: 'slider', start: 50, end: 100, height: 20, bottom: 5 }
     ];
 
+    // Calcula o total global de cada ano para poder gerar a porcentagem
+    const totalGlobalByYear = {};
+    years.forEach(year => {
+        totalGlobalByYear[year] = regions.reduce(
+            (sum, region) => sum + salesByYear[year][region.key], 0
+        );
+    });
+
+    const getTemporalValue = (year, regionKey) => {
+        const raw = salesByYear[year][regionKey];
+        if (!isRelativeMode) return Number(raw.toFixed(2));
+
+        const totalYear = totalGlobalByYear[year];
+        return totalYear > 0 ? Number(((raw / totalYear) * 100).toFixed(2)) : 0;
+    };
+
     charts.salesTimeline.setOption({
-        tooltip: { trigger: 'axis' },
+        tooltip: { 
+            trigger: 'axis',
+            valueFormatter: value => `${value.toFixed(2)}${isRelativeMode ? '%' : 'M'}`
+        },
         legend: { data: regions.map(region => region.name) },
-        grid: { left: 65, right: 30, bottom: 65 }, // Aumentado bottom para o slider
+        grid: { left: 65, right: 30, bottom: 65 },
         dataZoom: zoomConfig,
         xAxis: { type: 'category', boundaryGap: false, data: years },
-        yAxis: { type: 'value', name: 'Vendas (M)' },
+        yAxis: { 
+            type: 'value', 
+            name: isRelativeMode ? 'Fatia Global (%)' : 'Vendas (M)',
+            max: isRelativeMode ? 100 : null,
+            axisLabel: { formatter: isRelativeMode ? '{value}%' : '{value}' }
+        },
         series: regions.map(region => ({
             name: region.name,
             type: 'line',
             smooth: true,
             showSymbol: false,
-            data: years.map(year => salesByYear[year][region.key])
+            data: years.map(year => getTemporalValue(year, region.key))
         }))
     });
 

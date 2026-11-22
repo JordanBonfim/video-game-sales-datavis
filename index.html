@@ -16,6 +16,10 @@
 </head>
 <body>
 
+    <button id="globalModeBtn" class="floating-toggle-btn" type="button">
+        Modo: Valores Absolutos (Milhões)
+    </button>
+
     <header>
         <h1>Video Games Sales Dashboard</h1>
         <p>Análise de vendas e preferências regionais (1980–2024)</p>
@@ -26,7 +30,6 @@
         <section>
             <h2>01. Preferências Regionais</h2>
             <p>Comparação das vendas entre Japão, América do Norte e Europa.</p>
-
             <div class="chart-grid">
                 <div class="chart-card">
                     <h3>Vendas por gênero e região</h3>
@@ -44,7 +47,7 @@
                 </div>
 
                 <div class="chart-card full-width">
-                    <h3>Preferências Regionais no Mapa (Top Gêneros)</h3>
+                    <h3>Preferências Regionais no Mapa (Top Consoles)</h3>
                     <div id="geoMap" class="chart" style="height: 600px;"></div>
                 </div>
             </div>
@@ -74,7 +77,12 @@
     </main>
 
     <footer>
-        <p>Fonte: Video_Games_Sales_Cleaned.csv</p>
+        <p>
+            <strong>Fonte:</strong> 
+            <a href="https://www.kaggle.com/datasets/bhushandivekar/video-game-sales-and-industry-data-1980-2024" target="_blank" rel="noopener noreferrer">
+                Video Game Sales and Industry Data (1980–2024)
+            </a> (Kaggle / VGChartz) — 18.832 registros válidos (vendas em mídia física, em milhões de unidades).
+        </p>
     </footer>
 
     <script src="script.js"></script>

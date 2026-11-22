@@ -9,6 +9,7 @@ def is_directory_empty(path):
       
 files_path = "./files"
 force_download = False # Set to True if you want to force the download of the dataset even if it already exists
+print("Iniciando script...")
 
 if(not os.path.exists(files_path)):
   os.makedirs(files_path)
@@ -57,6 +58,11 @@ print("No developer:", df_raw['developer'].isnull().sum())
 
 # Quantity remaining after removing nulls from these two columns
 df_filtered = df_raw.dropna(subset=['total_sales', 'release_date'])
+
+
+
+
+
 print("Remaining rows after filtering sales and dates:", len(df_filtered))
 
 # Fill missing values in the 'developer' column with 'Unknown'
