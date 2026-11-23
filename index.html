@@ -1,82 +1,121 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Video Games Sales Dashboard</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../style.css" />
 
     <!-- Apache ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
     <!-- PapaParse: leitura de arquivos CSV -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-</head>
-<body>
-
+  </head>
+  <body>
     <header>
-        <h1>Video Games Sales Dashboard</h1>
-        <p>Análise de vendas e preferências regionais (1980–2024)</p>
-
+      <h1>Video Games Sales Dashboard</h1>
+      <p>Análise de vendas e preferências regionais (1980–2024)</p>
+      <p id="status">Carregando dados...</p>
     </header>
 
     <main>
-        <section>
-            <h2>01. Preferências Regionais</h2>
-            <p>Comparação das vendas entre Japão, América do Norte e Europa.</p>
+      <section>
+        <h2>01. Preferências Regionais</h2>
+        <p>Comparação das vendas entre Japão, América do Norte e Europa.</p>
 
-            <div class="chart-grid">
-                <div class="chart-card">
-                    <h3>Vendas por gênero e região</h3>
-                    <div id="regionalBar" class="chart"></div>
-                </div>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3>Vendas por gênero e região</h3>
+            <div id="regionalBar" class="chart"></div>
+          </div>
 
-                <div class="chart-card">
-                    <h3>Participação percentual por gênero</h3>
-                    <div id="regionalStacked" class="chart"></div>
-                </div>
+          <div class="chart-card">
+            <h3>Participação percentual por gênero</h3>
+            <div id="regionalStacked" class="chart"></div>
+          </div>
 
-                <div class="chart-card full-width">
-                    <h3>Heatmap de vendas por gênero e região</h3>
-                    <div id="regionalHeatmap" class="chart"></div>
-                </div>
+          <div class="chart-card full-width">
+            <h3>Heatmap de vendas por gênero e região</h3>
+            <div id="regionalHeatmap" class="chart"></div>
+          </div>
 
-                <div class="chart-card full-width">
-                    <h3>Preferências Regionais no Mapa (Top Gêneros)</h3>
-                    <div id="geoMap" class="chart" style="height: 600px;"></div>
-                </div>
-            </div>
-        </section>
+          <div class="chart-card full-width">
+            <h3>Preferências Regionais no Mapa (Top 10 consoles)</h3>
+            <div id="geoMap" class="chart" style="height: 600px"></div>
+          </div>
+        </div>
+      </section>
 
-        <section>
-            <h2>02. Evolução Temporal</h2>
-            <p>Comportamento das vendas e dos lançamentos ao longo dos anos.</p>
+      <section>
+        <h2>02. Evolução Temporal</h2>
+        <p>Comportamento das vendas e dos lançamentos ao longo dos anos.</p>
 
-            <div class="chart-grid">
-                <div class="chart-card full-width">
-                    <h3>Evolução das vendas por região</h3>
-                    <div id="salesTimeline" class="chart"></div>
-                </div>
+        <div class="chart-grid">
+          <div class="chart-card full-width">
+            <h3>Evolução das vendas por região</h3>
+            <div id="salesTimeline" class="chart"></div>
+          </div>
 
-                <div class="chart-card">
-                    <h3>Quantidade de jogos lançados por ano</h3>
-                    <div id="releasesTimeline" class="chart"></div>
-                </div>
+          <div class="chart-card">
+            <h3>Quantidade de jogos lançados por ano</h3>
+            <div id="releasesTimeline" class="chart"></div>
+          </div>
 
-                <div class="chart-card">
-                    <h3>Composição das vendas regionais</h3>
-                    <div id="salesArea" class="chart"></div>
-                </div>
-            </div>
-        </section>
+          <div class="chart-card">
+            <h3>Composição das vendas regionais</h3>
+            <div id="salesArea" class="chart"></div>
+          </div>
+
+          <div
+            class="full-width"
+            style="
+              display: flex;
+              gap: 10px;
+              align-items: center;
+              margin-bottom: 12px;
+            ">
+            <button id="playAllRaces" type="button">
+              ▶ Iniciar Todas as Corridas
+            </button>
+            <button id="pauseAllRaces" type="button">⏸ Pausar Todas</button>
+            <button id="restartAllRaces" type="button">
+              ↺ Reiniciar Todas
+            </button>
+          </div>
+
+          <div class="chart-container">
+            <h3>Corrida de Vendas Acumuladas por Estúdio/Publisher (Top 10)</h3>
+            <button id="replayStudio" type="button">
+              ↺ Reiniciar Estúdios
+            </button>
+            <div id="studioRace" style="width: 100%; height: 500px"></div>
+          </div>
+
+          <div class="chart-container">
+            <h3>Corrida de Vendas Acumuladas por Console (Top 10)</h3>
+            <button id="replayConsole" type="button">
+              ↺ Reiniciar Consoles
+            </button>
+            <div id="consoleRace" style="width: 100%; height: 500px"></div>
+          </div>
+
+          <div class="chart-container full-width">
+            <h3>Guerra dos Consoles: Vendas Acumuladas por Fabricante</h3>
+            <button id="replayOwner" type="button">
+              ↺ Reiniciar Fabricantes
+            </button>
+            <div id="ownerRace" style="width: 100%; height: 500px"></div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer>
-        <p>Fonte: Video_Games_Sales_Cleaned.csv</p>
+      <p>Fonte: Video_Games_Sales_Preprocessed.csv</p>
     </footer>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
